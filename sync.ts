@@ -9,9 +9,9 @@ const oauth2Client = new google.auth.OAuth2(
 
 oauth2Client.setCredentials({ refresh_token: process.env.REFRESH_TOKEN });
 
-const parseDate = (dateString: string) => {
+const parseDate = (dateString: string, withTime: boolean = true) => {
     const date = `${dateString.slice(0, 4)}-${dateString.slice(4, 6)}-${dateString.slice(6, 8)}`
-    const time = dateString.length > 8 ? `${dateString.slice(8, 11)}:${dateString.slice(11, 13)}:${dateString.slice(13, 15)}` : ""
+    const time = withTime && dateString.length > 8 ? `${dateString.slice(8, 11)}:${dateString.slice(11, 13)}:${dateString.slice(13, 15)}` : ""
     return `${date}${time}`
 }
 
@@ -42,10 +42,20 @@ try {
     const data = await res.text()
     const calendars = parse(data)
     for (const calendar of calendars) {
+        console.log("Starting to process calendar")
+        if (calendar.events.length === 0) {
+            console.log("No events on this calendar. Skipping")
+            continue
+        }
+
+        const earliestDate = new Date(parseDate(calendar.events[0].dtstart.split(":")[1], false)).toISOString()
+
+        console.log(`Starting from ${earliestDate}`)
+
         const gCal = google.calendar({ version: 'v3', auth: oauth2Client });
         let googleEvents = (await gCal.events.list({
             calendarId: process.env.CALENDAR_ID,
-            timeMin: new Date().toISOString(),
+            timeMin: earliestDate,
             maxResults: 1000,
             singleEvents: true,
             orderBy: 'startTime'
@@ -53,7 +63,7 @@ try {
 
         for (const event of calendar.events) {
             // const summary = reserved.reduce((value, reservedPhrase) => value.replaceAll(reservedPhrase[0], reservedPhrase[1]), event.summary).replaceAll(/[ ]+/g, " ")
-            const uidForLogs = event.uid.substring(0, 5)
+            const uidForLogs = event.uid.substring(event.uid.length - 5)
             console.log(`[${uidForLogs}]: Starting process`)
             const summary = event.summary.replaceAll(/[ ]+/g, " ")
             if (summary.startsWith("canceled")) {
