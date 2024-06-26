@@ -1,0 +1,25 @@
+name: Sync
+on:
+  schedule:
+    - cron: "0 * * * *"
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    container: oven/bun
+    env:
+      CLIENT_ID: ${{ secrets.CLIENT_ID }}
+      CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+      CALENDAR_ID: ${{ secrets.CALENDAR_ID }}
+      ICS_URL: ${{ secrets.ICS_URL }}
+      REFRESH_TOKEN: ${{ secrets.REFRESH_TOKEN }}
+
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: bun i
+
+      - name: Run script
+        run: bun i
