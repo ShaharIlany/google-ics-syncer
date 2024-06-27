@@ -68,6 +68,7 @@ try {
             const uidForLogs = event.uid.substring(event.uid.length - 5)
             console.log(`<${uidForLogs}>: Starting process`)
             const summary = reservedWords.reduce((value, reservedPhrase) => value.replaceAll(reservedPhrase.search, reservedPhrase.replace), event.summary).replaceAll(/[ ]+/g, " ")
+            const location = event.location.length > 1 ? event.location : undefined
             if (summary.startsWith("canceled")) {
                 console.log(`<${uidForLogs}>: Event is canceled, skipping`)
                 continue
@@ -86,6 +87,9 @@ try {
                     return false
                 }
                 if (googleEvent.summary !== summary) {
+                    return false
+                }
+                if (googleEvent.location !== location) {
                     return false
                 }
 
@@ -131,10 +135,11 @@ try {
                     calendarId: process.env.CALENDAR_ID,
                     requestBody: {
                         summary,
+                        location,
                         start, end
                     }
                 })
-                addedEvents.push({ summary })
+                addedEvents.push({ summary, start, end, location })
             }
             console.log(`<${uidForLogs}>: Done`)
 
@@ -154,7 +159,7 @@ try {
                     calendarId: process.env.CALENDAR_ID,
                     eventId: event.id
                 })
-                deletedEvents.push({ summary: event.summary ?? "- No Title -" })
+                deletedEvents.push({ summary: event.summary ?? "- No Title -", start: event.start, end: event.end, location: event.location ?? undefined })
                 console.log(`<${uidForLogs}> Deleted`)
             }
         }
