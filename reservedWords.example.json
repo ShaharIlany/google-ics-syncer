@@ -1,0 +1,14 @@
+[
+  {
+    "search": "Important ",
+    "replace": ""
+  },
+  {
+    "search": "Optional ",
+    "replace": ""
+  },
+  {
+    "search": " - tentative",
+    "replace": " | T"
+  }
+]
