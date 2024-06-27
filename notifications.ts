@@ -1,43 +1,59 @@
+import { format, subDays } from "date-fns"
 import type { MinifiedEvent } from "./types"
 
-const sendNotification = async (title: string, tags: string[], body: string) => {
+const sendNotification = async (title: string, tags: string[], body: string, clickDate: Date) => {
     await fetch(`https://ntfy.sh/${process.env.NTFY_TOPIC_ID}`, {
         method: 'POST',
         headers: {
             'Title': title,
-            'Click': 'https://calendar.google.com/calendar/u/0/r/day',
+            'Click': `https://calendar.google.com/calendar/u/0/r/day/${format(clickDate, "yyyy/M/d")}`,
             'Tags': tags.join(",")
         },
         body,
     })
 }
 
-const getNotificationTitle = (addedEvents: MinifiedEvent[], deletedEvents: MinifiedEvent[]) => {
-    if (addedEvents.length > 0 && deletedEvents.length > 0) {
-        return `${addedEvents.length + deletedEvents.length} Events Updated`
+
+const formatDateString = (event: MinifiedEvent) => {
+    if (!event.start || !event.end) {
+        return ""
     }
-    if (addedEvents.length > 0) {
-        return `${addedEvents.length} New Event${deletedEvents.length > 1 ? "s" : ""}`
+
+    if (event.start.date && event.end.date) {
+        if (event.start.date === event.end.date) {
+            // dd/MM/yyyy
+            return format(new Date(event.end.date), "dd/MM/yyyy")
+        } else {
+            // dd/MM/yyyy - dd/MM/yyyy
+            return `${format(new Date(event.start.date), "dd/MM/yyyy")} - ${format(subDays(new Date(event.end.date), 1), "dd/MM/yyyy")}`
+        }
     }
-    if (deletedEvents.length > 0) {
-        return `${deletedEvents.length} Canceled Event${deletedEvents.length > 1 ? "s" : ""}`
+
+    if (event.start.dateTime && event.end.dateTime) {
+        const start = new Date(event.start.dateTime)
+        const end = new Date(event.end.dateTime)
+        if (format(start, "dd/MM/yyyy") === format(end, "dd/MM/yyyy")) {
+            // dd/MM/yyyy HH:mm - HH:mm
+            return `${format(start, "dd/MM/yyyy HH:mm")} - ${format(end, "HH:mm")}`
+        } else {
+            // dd/MM/yyyy HH:mm - dd/MM/yyyy HH:mm
+            return `${format(start, "dd/MM/yyyy HH:mm")} - ${format(end, "dd/MM/yyyy HH:mm")}`
+        }
     }
-    return "never"
+
+    return ""
 }
 
-const formatEventList = (events: MinifiedEvent[], prefix: string) =>
-    events.map(({ summary }: MinifiedEvent) => `${prefix} ${summary.trim()}`).join("\n")
-
 export const updateAboutEvents = async (addedEvents: MinifiedEvent[], deletedEvents: MinifiedEvent[]) => {
-    const title = getNotificationTitle(addedEvents, deletedEvents)
+    for (const event of addedEvents) {
+        const formattedDate = formatDateString(event)
+        const startTime = new Date(event.start?.date ?? event.start?.dateTime ?? "")
+        await sendNotification("New Event", ["spiral_calendar"], `${event.summary}${formattedDate ? "\n🕑 " + formattedDate : ""}${event.location ? "\n📌 " + event.location : ""}`, startTime)
+    }
 
-    const addedEventsDescription = formatEventList(addedEvents, "📌")
-    const canceledEventsDescription = formatEventList(deletedEvents, "🗑️")
-
-    const body = [
-        ...(addedEvents.length > 0 ? [addedEventsDescription] : []),
-        ...(deletedEvents.length > 0 ? [canceledEventsDescription] : [])
-    ]
-
-    await sendNotification(title, ["spiral_calendar"], body.join("\n\n"))
+    for (const event of deletedEvents) {
+        const formattedDate = formatDateString(event)
+        const startTime = new Date(event.start?.date ?? event.start?.dateTime ?? "")
+        await sendNotification("Canceled Event", ["wastebasket"], `${event.summary}${formattedDate ? "\n🕑 " + formattedDate : ""}${event.location ? "\n📌 " + event.location : ""}`, startTime)
+    }
 }
