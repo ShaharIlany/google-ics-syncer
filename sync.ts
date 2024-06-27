@@ -65,23 +65,22 @@ try {
         })).data.items ?? []
 
         for (const event of calendar.events) {
-            // const summary = reserved.reduce((value, reservedPhrase) => value.replaceAll(reservedPhrase[0], reservedPhrase[1]), event.summary).replaceAll(/[ ]+/g, " ")
             const uidForLogs = event.uid.substring(event.uid.length - 5)
-            console.log(`[${uidForLogs}]: Starting process`)
+            console.log(`<${uidForLogs}>: Starting process`)
             const summary = reservedWords.reduce((value, reservedPhrase) => value.replaceAll(reservedPhrase.search, reservedPhrase.replace), event.summary).replaceAll(/[ ]+/g, " ")
             if (summary.startsWith("canceled")) {
-                console.log(`[${uidForLogs}]: Event is canceled, skipping`)
+                console.log(`<${uidForLogs}>: Event is canceled, skipping`)
                 continue
             }
             const { start, end } = getEventStartEnd(event)
 
             if (start.dateTime && end.dateTime) {
                 if (+(new Date(end.dateTime)) - +(new Date(start.dateTime)) === 0) {
-                    console.log(`[${uidForLogs}]: Event is less than 1 minute long, skipping`)
+                    console.log(`<${uidForLogs}>: Event is less than 1 minute long, skipping`)
                     continue
                 }
             }
-            console.log(`[${uidForLogs}]: Looking for matching event on google calendar`)
+            console.log(`<${uidForLogs}>: Looking for matching event on google calendar`)
             const matchingGoogleEvent = googleEvents.find(googleEvent => {
                 if (!googleEvent.end) {
                     return false
@@ -123,10 +122,10 @@ try {
             })
 
             if (matchingGoogleEvent) {
-                console.log(`[${uidForLogs}]: Found matching event. Skipping`)
+                console.log(`<${uidForLogs}>: Found matching event. Skipping`)
                 googleEvents = googleEvents.filter(googleEvent => googleEvent.id !== matchingGoogleEvent.id)
             } else {
-                console.log(`[${uidForLogs}]: Inserting event into google calendar`)
+                console.log(`<${uidForLogs}>: Inserting event into google calendar`)
 
                 await gCal.events.insert({
                     calendarId: process.env.CALENDAR_ID,
@@ -137,7 +136,7 @@ try {
                 })
                 addedEvents.push({ summary })
             }
-            console.log(`[${uidForLogs}]: Done`)
+            console.log(`<${uidForLogs}>: Done`)
 
         }
 
@@ -146,9 +145,9 @@ try {
             console.log("Deleting left google events (probably canceled)")
             for (const event of googleEvents) {
                 const uidForLogs = (event.id ?? "").substring(0, 5)
-                console.log(`[${uidForLogs}] Deleting`)
+                console.log(`<${uidForLogs}> Deleting Event`)
                 if (!event.id) {
-                    console.log(`[${uidForLogs}] Can't delete event, no ID available`)
+                    console.log(`<${uidForLogs}> Can't delete event, no ID available`)
                     continue
                 }
                 await gCal.events.delete({
@@ -156,7 +155,7 @@ try {
                     eventId: event.id
                 })
                 deletedEvents.push({ summary: event.summary ?? "- No Title -" })
-                console.log(`[${uidForLogs}] Deleted`)
+                console.log(`<${uidForLogs}> Deleted`)
             }
         }
     }
