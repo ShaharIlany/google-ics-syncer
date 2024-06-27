@@ -63,3 +63,12 @@ export const CalendarZod = z.object({
 })
 
 export type Calendar = z.infer<typeof CalendarZod>
+
+export type ReservedWord = {
+    search: string;
+    replace: string
+}
+
+export type MinifiedEvent = {
+    summary: string;
+}
