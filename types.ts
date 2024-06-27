@@ -1,3 +1,4 @@
+import type { calendar_v3 } from "googleapis"
 import z from "zod"
 
 export const ZoneRuleZod = z.object({
@@ -71,4 +72,7 @@ export type ReservedWord = {
 
 export type MinifiedEvent = {
     summary: string;
+    location?: string;
+    start?: calendar_v3.Schema$EventDateTime;
+    end?: calendar_v3.Schema$EventDateTime;
 }
