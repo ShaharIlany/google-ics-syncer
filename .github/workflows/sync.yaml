@@ -14,6 +14,8 @@ jobs:
       CALENDAR_ID: ${{ secrets.CALENDAR_ID }}
       ICS_URL: ${{ secrets.ICS_URL }}
       REFRESH_TOKEN: ${{ secrets.REFRESH_TOKEN }}
+      NTFY_TOPIC_ID: ${{ secrets.NTFY_TOPIC_ID }}
+      RESERVED_WORDS: ${{ secrets.RESERVED_WORDS }}
 
     steps:
       - name: Check out repository code
