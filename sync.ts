@@ -1,11 +1,14 @@
+import { updateAboutEvents } from "./notifications";
 import parse from "./parseICS";
-import type { CalendarEvent } from "./types";
+import type { CalendarEvent, MinifiedEvent, ReservedWord } from "./types";
 import { google, calendar_v3 } from "googleapis"
 
 const oauth2Client = new google.auth.OAuth2(
     process.env.CLIENT_ID,
     process.env.CLIENT_SECRET
 );
+
+const reservedWords: ReservedWord[] = JSON.parse(process.env.RESERVED_WORDS ?? "[]")
 
 oauth2Client.setCredentials({ refresh_token: process.env.REFRESH_TOKEN });
 
@@ -36,8 +39,8 @@ const getEventStartEnd = (event: CalendarEvent): { start: calendar_v3.Schema$Eve
 }
 
 try {
-    let addedEvents = 0
-    let deletedEvents = 0
+    const addedEvents: MinifiedEvent[] = []
+    const deletedEvents: MinifiedEvent[] = []
     const res = await fetch(process.env.ICS_URL!)
     const data = await res.text()
     const calendars = parse(data)
@@ -65,13 +68,19 @@ try {
             // const summary = reserved.reduce((value, reservedPhrase) => value.replaceAll(reservedPhrase[0], reservedPhrase[1]), event.summary).replaceAll(/[ ]+/g, " ")
             const uidForLogs = event.uid.substring(event.uid.length - 5)
             console.log(`[${uidForLogs}]: Starting process`)
-            const summary = event.summary.replaceAll(/[ ]+/g, " ")
+            const summary = reservedWords.reduce((value, reservedPhrase) => value.replaceAll(reservedPhrase.search, reservedPhrase.replace), event.summary).replaceAll(/[ ]+/g, " ")
             if (summary.startsWith("canceled")) {
                 console.log(`[${uidForLogs}]: Event is canceled, skipping`)
                 continue
             }
             const { start, end } = getEventStartEnd(event)
 
+            if (start.dateTime && end.dateTime) {
+                if (+(new Date(end.dateTime)) - +(new Date(start.dateTime)) === 0) {
+                    console.log(`[${uidForLogs}]: Event is less than 1 minute long, skipping`)
+                    continue
+                }
+            }
             console.log(`[${uidForLogs}]: Looking for matching event on google calendar`)
             const matchingGoogleEvent = googleEvents.find(googleEvent => {
                 if (!googleEvent.end) {
@@ -126,7 +135,7 @@ try {
                         start, end
                     }
                 })
-                addedEvents++
+                addedEvents.push({ summary })
             }
             console.log(`[${uidForLogs}]: Done`)
 
@@ -146,12 +155,17 @@ try {
                     calendarId: process.env.CALENDAR_ID,
                     eventId: event.id
                 })
-                deletedEvents++
+                deletedEvents.push({ summary: event.summary ?? "- No Title -" })
                 console.log(`[${uidForLogs}] Deleted`)
             }
         }
     }
-    console.log(`Summary | Added Events: ${addedEvents}, Deleted Events: ${deletedEvents}`)
+    if (deletedEvents.length > 0 || addedEvents.length > 0) {
+        console.log(`Sending notification about events update`)
+        await updateAboutEvents(addedEvents, deletedEvents)
+        console.log(`Notification sent`)
+    }
+    console.log(`Summary | Added Events: ${addedEvents.length}, Deleted Events: ${deletedEvents.length}`)
 } catch (e) {
     console.log("Error:", e)
 }
