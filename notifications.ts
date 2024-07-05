@@ -44,7 +44,7 @@ const formatDateString = (event: MinifiedEvent) => {
     return ""
 }
 
-export const updateAboutEvents = async (addedEvents: MinifiedEvent[], deletedEvents: MinifiedEvent[]) => {
+export const updateAboutEvents = async (addedEvents: MinifiedEvent[], deletedEvents: MinifiedEvent[], rescheduledEvents: MinifiedEvent[]) => {
     for (const event of addedEvents) {
         const formattedDate = formatDateString(event)
         const startTime = new Date(event.start?.date ?? event.start?.dateTime ?? "")
@@ -55,5 +55,11 @@ export const updateAboutEvents = async (addedEvents: MinifiedEvent[], deletedEve
         const formattedDate = formatDateString(event)
         const startTime = new Date(event.start?.date ?? event.start?.dateTime ?? "")
         await sendNotification("Canceled Event", ["wastebasket"], `${event.summary}${formattedDate ? "\n🕑 " + formattedDate : ""}${event.location ? "\n📌 " + event.location : ""}`, startTime)
+    }
+
+    for (const event of rescheduledEvents) {
+        const formattedDate = formatDateString(event)
+        const startTime = new Date(event.start?.date ?? event.start?.dateTime ?? "")
+        await sendNotification("Rescheduled Event", ["arrows_counterclockwise"], `${event.summary}${formattedDate ? "\n🕑 " + formattedDate : ""}${event.location ? "\n📌 " + event.location : ""}`, startTime)
     }
 }
