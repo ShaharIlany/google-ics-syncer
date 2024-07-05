@@ -71,6 +71,7 @@ export type ReservedWord = {
 }
 
 export type MinifiedEvent = {
+    googleEvent: calendar_v3.Schema$Event;
     summary: string;
     location?: string;
     start?: calendar_v3.Schema$EventDateTime;
