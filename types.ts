@@ -76,4 +76,6 @@ export type MinifiedEvent = {
     location?: string;
     start?: calendar_v3.Schema$EventDateTime;
     end?: calendar_v3.Schema$EventDateTime;
+    oldStart?: calendar_v3.Schema$EventDateTime;
+    oldEnd?: calendar_v3.Schema$EventDateTime;
 }

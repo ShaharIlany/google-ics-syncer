@@ -160,7 +160,7 @@ try {
                     console.log(`<${uidForLogs}> Updating the current event with the old properties`)
 
                     const { start, end } = rescheduledEvent.googleEvent
-                    const { start: _, end: __, ...newEvent } = event
+                    const { start: oldStart, end: oldEnd, ...old } = event
 
                     await gCal.events.update({
                         calendarId: process.env.CALENDAR_ID,
@@ -168,14 +168,14 @@ try {
                         requestBody: {
                             start,
                             end,
-                            ...newEvent
+                            ...old
                         }
                     })
 
                     console.log(`<${uidForLogs}> Ok`)
 
                     console.log(`<${uidForLogs}> Adding event to rescheduled event list`)
-                    rescheduledEvents.push(rescheduledEvent);
+                    rescheduledEvents.push({ ...rescheduledEvent, oldStart, oldEnd });
 
                     console.log(`<${uidForLogs}> Removing event from added event list`)
                     addedEvents.splice(addedEvents.findIndex((i) => i.googleEvent.id === rescheduledEvent.googleEvent.id), 1)
