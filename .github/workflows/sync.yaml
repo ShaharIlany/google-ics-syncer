@@ -2,7 +2,7 @@ name: Sync
 on:
   push:
   schedule:
-    - cron: "0 4-22 * * *"
+    - cron: "0 4-22/3 * * *"
 
 jobs:
   sync:
