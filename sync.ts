@@ -41,6 +41,7 @@ const getEventStartEnd = (event: CalendarEvent): { start: calendar_v3.Schema$Eve
 try {
     const addedEvents: MinifiedEvent[] = []
     const deletedEvents: MinifiedEvent[] = []
+    const rescheduledEvents: MinifiedEvent[] = []
     const res = await fetch(process.env.ICS_URL!)
     const data = await res.text()
     const calendars = parse(data)
@@ -131,7 +132,7 @@ try {
             } else {
                 console.log(`<${uidForLogs}>: Inserting event into google calendar`)
 
-                await gCal.events.insert({
+                const newEvent = await gCal.events.insert({
                     calendarId: process.env.CALENDAR_ID,
                     requestBody: {
                         summary,
@@ -139,7 +140,7 @@ try {
                         start, end
                     }
                 })
-                addedEvents.push({ summary, start, end, location })
+                addedEvents.push({ summary, start, end, location, googleEvent: newEvent.data })
             }
             console.log(`<${uidForLogs}>: Done`)
 
@@ -147,10 +148,44 @@ try {
 
         console.log(`Finished parsing for this calendar. Events left: ${googleEvents.length}`)
         if (googleEvents.length > 0) {
-            console.log("Deleting left google events (probably canceled)")
+            console.log("Deleting left google events")
             for (const event of googleEvents) {
                 const uidForLogs = (event.id ?? "").substring(0, 5)
-                console.log(`<${uidForLogs}> Deleting Event`)
+
+                console.log(`<${uidForLogs}> Checking for matching events that currently added`)
+                const rescheduledEvent = addedEvents.find(e => e.summary === event.summary)
+
+                if (rescheduledEvent && rescheduledEvent.googleEvent.id) {
+                    console.log(`<${uidForLogs}> This event is rescheduled.`)
+                    console.log(`<${uidForLogs}> Updating the current event with the old properties`)
+
+                    const { start, end } = rescheduledEvent.googleEvent
+                    const { start: _, end: __, ...newEvent } = event
+
+                    await gCal.events.update({
+                        calendarId: process.env.CALENDAR_ID,
+                        eventId: rescheduledEvent.googleEvent.id,
+                        requestBody: {
+                            start,
+                            end,
+                            ...newEvent
+                        }
+                    })
+
+                    console.log(`<${uidForLogs}> Ok`)
+
+                    console.log(`<${uidForLogs}> Adding event to rescheduled event list`)
+                    rescheduledEvents.push(rescheduledEvent);
+
+                    console.log(`<${uidForLogs}> Removing event from added event list`)
+                    addedEvents.splice(addedEvents.findIndex((i) => i.googleEvent.id === rescheduledEvent.googleEvent.id), 1)
+
+
+                } else {
+                    console.log(`<${uidForLogs}> This event is probably canceled`)
+                }
+
+                console.log(`<${uidForLogs}> Deleting Old Event`)
                 if (!event.id) {
                     console.log(`<${uidForLogs}> Can't delete event, no ID available`)
                     continue
@@ -159,17 +194,24 @@ try {
                     calendarId: process.env.CALENDAR_ID,
                     eventId: event.id
                 })
-                deletedEvents.push({ summary: event.summary ?? "- No Title -", start: event.start, end: event.end, location: event.location ?? undefined })
                 console.log(`<${uidForLogs}> Deleted`)
+                if (!rescheduledEvent) {
+                    console.log(`<${uidForLogs}> Adding event to deleted event list because it was not rescheduled`)
+                    deletedEvents.push({ googleEvent: event, summary: event.summary ?? "- No Title -", start: event.start, end: event.end, location: event.location ?? undefined })
+                }
+                console.log(`<${uidForLogs}> Done`)
             }
         }
     }
-    if (deletedEvents.length > 0 || addedEvents.length > 0) {
+
+
+
+    if (deletedEvents.length > 0 || addedEvents.length > 0 || rescheduledEvents.length > 0) {
         console.log(`Sending notification about events update`)
-        await updateAboutEvents(addedEvents, deletedEvents)
+        await updateAboutEvents(addedEvents, deletedEvents, rescheduledEvents)
         console.log(`Notification sent`)
     }
-    console.log(`Summary | Added Events: ${addedEvents.length}, Deleted Events: ${deletedEvents.length}`)
+    console.log(`Summary | Added Events: ${addedEvents.length}, Deleted Events: ${deletedEvents.length}, Rescheduled Events: ${rescheduledEvents.length}`)
 } catch (e) {
     console.log("Error:", e)
 }
