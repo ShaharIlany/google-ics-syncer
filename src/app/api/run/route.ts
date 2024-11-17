@@ -1,7 +1,12 @@
-export const dynamic = 'force-dynamic'; // static by default, unless reading the request
+import { OutlookEventZod } from "../../../types";
 
 export async function POST(request: Request) {
     const r = await request.json()
-    console.log(r)
+    const data = OutlookEventZod.array().parse(r)
+    // execute(data)
+    data.forEach(d => {
+        console.log(d)
+    })
+    return new Response();
     return Response.json(r);
 }
