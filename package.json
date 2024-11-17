@@ -3,7 +3,7 @@
   "module": "index.ts",
   "type": "module",
   "scripts": {
-    "dev": "bun --watch index.ts"
+    "dev": "next"
   },
   "devDependencies": {
     "@types/bun": "latest"
@@ -12,8 +12,10 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
+    "@types/react": "^18.3.12",
     "date-fns": "^3.6.0",
     "googleapis": "^140.0.0",
+    "next": "^15.0.3",
     "zod": "^3.23.8"
   }
 }
