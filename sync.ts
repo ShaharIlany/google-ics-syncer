@@ -1,7 +1,8 @@
+import { addMilliseconds, format } from "date-fns";
 import { updateAboutEvents } from "./notifications";
-import parse from "./parseICS";
-import type { CalendarEvent, MinifiedEvent, ReservedWord } from "./types";
+import { type OutlookEvent, type MinifiedEvent, type ReservedWord, OutlookEventZod } from "./types";
 import { google, calendar_v3 } from "googleapis"
+import { getTimezoneOffset } from "date-fns-tz";
 
 const oauth2Client = new google.auth.OAuth2(
     process.env.CLIENT_ID,
@@ -12,49 +13,65 @@ const reservedWords: ReservedWord[] = JSON.parse(process.env.RESERVED_WORDS ?? "
 
 oauth2Client.setCredentials({ refresh_token: process.env.REFRESH_TOKEN });
 
-const parseDate = (dateString: string, withTime: boolean = true) => {
-    const date = `${dateString.slice(0, 4)}-${dateString.slice(4, 6)}-${dateString.slice(6, 8)}`
-    const time = withTime && dateString.length > 8 ? `${dateString.slice(8, 11)}:${dateString.slice(11, 13)}:${dateString.slice(13, 15)}` : ""
-    return `${date}${time}`
-}
+const asiaJerusalem = (date: Date) => addMilliseconds(date, getTimezoneOffset("Asia/Jerusalem"))
 
-const getEventStartEnd = (event: CalendarEvent): { start: calendar_v3.Schema$EventDateTime, end: calendar_v3.Schema$EventDateTime } => {
-    if (event["x-microsoft-cdo-alldayevent"]) {
+const getEventStartEnd = (event: OutlookEvent): { start: calendar_v3.Schema$EventDateTime, end: calendar_v3.Schema$EventDateTime } => {
+    if (event.isAllDay) {
         return {
-            start: { date: parseDate(event.dtstart.split(":")[1]) },
-            end: { date: parseDate(event.dtend.split(":")[1]) }
+            start: { date: format(asiaJerusalem(event.start), "yyyy-MM-dd") },
+            end: { date: format(asiaJerusalem(event.end), "yyyy-MM-dd") }
         }
     } else {
         return {
             start: {
-                dateTime: parseDate(event.dtstart.split(":")[1]),
+                dateTime: format(asiaJerusalem(event.start), "yyyy-MM-dd'T'HH:mm:ssXXX"),
                 timeZone: "Asia/Jerusalem"
             },
             end: {
-                dateTime: parseDate(event.dtend.split(":")[1]),
+                dateTime: format(asiaJerusalem(event.end), "yyyy-MM-dd'T'HH:mm:ssXXX"),
                 timeZone: "Asia/Jerusalem"
             }
         }
     }
 }
 
-try {
-    const addedEvents: MinifiedEvent[] = []
-    const deletedEvents: MinifiedEvent[] = []
-    const rescheduledEvents: MinifiedEvent[] = []
-    const res = await fetch(process.env.ICS_URL!)
-    const data = await res.text()
-    const calendars = parse(data)
-    for (const calendar of calendars) {
-        console.log("Starting to process calendar")
-        if (calendar.events.length === 0) {
-            console.log("No events on this calendar. Skipping")
-            continue
+export const execute = async () => {
+    try {
+        const gDrive = google.drive({ version: "v3", auth: oauth2Client })
+
+        const root = await gDrive.files.get({ fileId: "root" })
+        if (!root.data.id) {
+            console.log("Root drive not found")
         }
 
-        const earliestDate = new Date(parseDate(calendar.events[0].dtstart.split(":")[1], false)).toISOString()
+        const { data: { files: ***REMOVED***Directory } } = await gDrive.files.list({ pageSize: 10, fields: "files(id,name,parents)", q: `mimeType = 'application/vnd.google-apps.folder' and '${root.data.id}' in parents and name = '***REMOVED***'` })
+        const ***REMOVED***DirectoryId = ***REMOVED***Directory?.[0].id
+        if (!***REMOVED***DirectoryId) {
+            console.log("***REMOVED***ectory not found.")
+            return
+        }
 
-        console.log(`Starting from ${earliestDate}`)
+        const { data: { files: dataFile } } = await gDrive.files.list({ pageSize: 10, fields: "files(id,name,parents)", q: `'${***REMOVED***DirectoryId}' in parents and name = 'data.json'` })
+        const dataFileId = dataFile?.[0].id
+        if (!dataFileId) {
+            console.log("***REMOVED***/data.json not found.")
+            return
+        }
+
+
+        const { data } = await gDrive.files.get({ fileId: dataFileId, alt: "media", })
+        const outlookEvents = OutlookEventZod.array().parse(data)
+
+        console.log(`Downloaded ${outlookEvents.length} events. Starting`)
+
+        const addedEvents: MinifiedEvent[] = []
+        const deletedEvents: MinifiedEvent[] = []
+        const rescheduledEvents: MinifiedEvent[] = []
+        if (outlookEvents.length === 0) {
+            return
+        }
+
+        const earliestDate = outlookEvents.toSorted((a, b) => +a.start - +b.start)[0].start.toISOString()
 
         const gCal = google.calendar({ version: 'v3', auth: oauth2Client });
         let googleEvents = (await gCal.events.list({
@@ -65,64 +82,52 @@ try {
             orderBy: 'startTime'
         })).data.items ?? []
 
-        for (const event of calendar.events) {
-            const uidForLogs = event.uid.substring(event.uid.length - 5)
-            console.log(`<${uidForLogs}>: Starting process`)
-            const summary = reservedWords.reduce((value, reservedPhrase) => value.replaceAll(reservedPhrase.search, reservedPhrase.replace), event.summary).replaceAll(/[ ]+/g, " ")
-            const location = event.location.length > 1 ? event.location : undefined
-            if (summary.startsWith("canceled")) {
-                console.log(`<${uidForLogs}>: Event is canceled, skipping`)
-                continue
-            }
-            const { start, end } = getEventStartEnd(event)
+        for (const event of outlookEvents) {
+            const uidForLogs = event.id.substring(event.id.length - 10)
 
-            if (start.dateTime && end.dateTime) {
-                if (+(new Date(end.dateTime)) - +(new Date(start.dateTime)) === 0) {
-                    console.log(`<${uidForLogs}>: Event is less than 1 minute long, skipping`)
-                    continue
-                }
+            const subject = reservedWords.reduce((value, reservedPhrase) => value.replaceAll(reservedPhrase.search, reservedPhrase.replace), event.subject).replaceAll(/[ ]+/g, " ")
+            const location = event.location.length > 1 ? event.location : undefined
+            if (subject.startsWith("canceled")) {
+                console.log(`<${uidForLogs}>: Event is canceled, skipping`)
+                continue;
             }
+
+            if (+(new Date(event.end)) - +(new Date(event.start)) === 0) {
+                console.log(`<${uidForLogs}>: Event is less than 1 minute long, skipping`)
+                continue;
+            }
+
             console.log(`<${uidForLogs}>: Looking for matching event on google calendar`)
             const matchingGoogleEvent = googleEvents.find(googleEvent => {
                 if (!googleEvent.end) {
                     return false
                 }
-                if (googleEvent.summary !== summary) {
+
+                // If the subjects are different then those are not the same events
+                if (googleEvent.summary !== subject) {
                     return false
                 }
+
+                // If the locations are not the same then those are not the same events
                 if (googleEvent.location !== location) {
                     return false
                 }
 
-                if (!!googleEvent.end.date !== !!end.date) {
+                // If one of the events is all day and the second is not, then those are not the same events
+                if (event.isAllDay !== !!(googleEvent.end.date)) {
                     return false
                 }
 
-                if (!!googleEvent.end.dateTime !== !!end.dateTime) {
+                // If they are all day events but the end dates are different then those are not the same events
+                if (event.isAllDay && googleEvent.end.date !== format(asiaJerusalem(event.end), "yyyy-MM-dd")) {
                     return false
                 }
 
-                if (!!googleEvent.end.timeZone !== !!end.timeZone) {
+                // If they are not all day events but the end dates are different then those are not the same events
+                if (!event.isAllDay && googleEvent.end.dateTime !== format(asiaJerusalem(event.end), "yyyy-MM-dd'T'HH:mm:ssXXX")) {
                     return false
                 }
 
-                if (googleEvent.end.date && end.date) {
-                    if (googleEvent.end.date !== end.date) {
-                        return false
-                    }
-                }
-
-                if (googleEvent.end.dateTime && end.dateTime) {
-                    if (!googleEvent.end.dateTime.startsWith(end.dateTime)) {
-                        return false
-                    }
-                }
-
-                if (googleEvent.end.timeZone && end.timeZone) {
-                    if (googleEvent.end.timeZone !== end.timeZone) {
-                        return false
-                    }
-                }
                 return true
             })
 
@@ -131,87 +136,60 @@ try {
                 googleEvents = googleEvents.filter(googleEvent => googleEvent.id !== matchingGoogleEvent.id)
             } else {
                 console.log(`<${uidForLogs}>: Inserting event into google calendar`)
-
+                const { start, end } = getEventStartEnd(event)
                 const newEvent = await gCal.events.insert({
                     calendarId: process.env.CALENDAR_ID,
                     requestBody: {
-                        summary,
+                        summary: subject,
                         location,
                         start, end
                     }
                 })
-                addedEvents.push({ summary, start, end, location, googleEvent: newEvent.data })
+                addedEvents.push({ summary: subject, start, end, location, googleEvent: newEvent.data })
             }
             console.log(`<${uidForLogs}>: Done`)
-
         }
-
         console.log(`Finished parsing for this calendar. Events left: ${googleEvents.length}`)
+
         if (googleEvents.length > 0) {
             console.log("Deleting left google events")
             for (const event of googleEvents) {
-                const uidForLogs = (event.id ?? "").substring(0, 5)
+                const { id, start, end, location, summary } = event
+                if (!id || !start || !end) {
+                    console.log("Event has no ID, start or end, skipping")
+                    continue
+                }
+                const uidForLogs = id.substring(0, 5)
 
                 console.log(`<${uidForLogs}> Checking for matching events that currently added`)
-                const rescheduledEvent = addedEvents.find(e => e.summary === event.summary)
+                const rescheduledEvent = addedEvents.find(e => e.summary === summary)
 
                 if (rescheduledEvent && rescheduledEvent.googleEvent.id) {
                     console.log(`<${uidForLogs}> This event is rescheduled.`)
                     console.log(`<${uidForLogs}> Updating the current event with the old properties`)
-
-                    const { start, end } = rescheduledEvent.googleEvent
-                    const { start: oldStart, end: oldEnd, ...old } = event
-
-                    await gCal.events.update({
-                        calendarId: process.env.CALENDAR_ID,
-                        eventId: rescheduledEvent.googleEvent.id,
-                        requestBody: {
-                            start,
-                            end,
-                            ...old
-                        }
-                    })
-
-                    console.log(`<${uidForLogs}> Ok`)
-
-                    console.log(`<${uidForLogs}> Adding event to rescheduled event list`)
-                    rescheduledEvents.push({ ...rescheduledEvent, oldStart, oldEnd });
-
+                    rescheduledEvents.push({ summary: summary ?? "", start, end, location: location ?? "", googleEvent: event, oldEnd: rescheduledEvent.end, oldStart: rescheduledEvent.start })
                     console.log(`<${uidForLogs}> Removing event from added event list`)
                     addedEvents.splice(addedEvents.findIndex((i) => i.googleEvent.id === rescheduledEvent.googleEvent.id), 1)
-
-
                 } else {
-                    console.log(`<${uidForLogs}> This event is probably canceled`)
-                }
-
-                console.log(`<${uidForLogs}> Deleting Old Event`)
-                if (!event.id) {
-                    console.log(`<${uidForLogs}> Can't delete event, no ID available`)
-                    continue
+                    console.log(`<${uidForLogs}> Nothing found, probably deleted`)
+                    deletedEvents.push({ summary: summary ?? "", start, end, location: location ?? "", googleEvent: event })
                 }
                 await gCal.events.delete({
                     calendarId: process.env.CALENDAR_ID,
-                    eventId: event.id
+                    eventId: id
                 })
-                console.log(`<${uidForLogs}> Deleted`)
-                if (!rescheduledEvent) {
-                    console.log(`<${uidForLogs}> Adding event to deleted event list because it was not rescheduled`)
-                    deletedEvents.push({ googleEvent: event, summary: event.summary ?? "- No Title -", start: event.start, end: event.end, location: event.location ?? undefined })
-                }
-                console.log(`<${uidForLogs}> Done`)
             }
         }
+
+        if (deletedEvents.length > 0 || addedEvents.length > 0 || rescheduledEvents.length > 0) {
+            console.log(`Sending notification about events update`)
+            await updateAboutEvents(addedEvents, deletedEvents, rescheduledEvents)
+            console.log(`Notification sent`)
+        }
+        console.log(`Summary | Added Events: ${addedEvents.length}, Deleted Events: ${deletedEvents.length}, Rescheduled Events: ${rescheduledEvents.length}`)
+    } catch (e) {
+        console.log("Error:", e)
     }
-
-
-
-    if (deletedEvents.length > 0 || addedEvents.length > 0 || rescheduledEvents.length > 0) {
-        console.log(`Sending notification about events update`)
-        await updateAboutEvents(addedEvents, deletedEvents, rescheduledEvents)
-        console.log(`Notification sent`)
-    }
-    console.log(`Summary | Added Events: ${addedEvents.length}, Deleted Events: ${deletedEvents.length}, Rescheduled Events: ${rescheduledEvents.length}`)
-} catch (e) {
-    console.log("Error:", e)
 }
+
+await execute()
