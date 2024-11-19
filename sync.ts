@@ -13,7 +13,7 @@ const reservedWords: ReservedWord[] = JSON.parse(process.env.RESERVED_WORDS ?? "
 
 oauth2Client.setCredentials({ refresh_token: process.env.REFRESH_TOKEN });
 
-const asiaJerusalem = (date: Date) => addMilliseconds(date, getTimezoneOffset("Asia/Jerusalem"))
+const asiaJerusalem = (date: Date) => date //addMilliseconds(date, getTimezoneOffset("Asia/Jerusalem"))
 
 const getEventStartEnd = (event: OutlookEvent): { start: calendar_v3.Schema$EventDateTime, end: calendar_v3.Schema$EventDateTime } => {
     if (event.isAllDay) {
