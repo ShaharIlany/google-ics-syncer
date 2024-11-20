@@ -18,17 +18,17 @@ const asiaJerusalem = (date: Date) => addMilliseconds(date, getTimezoneOffset("A
 const getEventStartEnd = (event: OutlookEvent): { start: calendar_v3.Schema$EventDateTime, end: calendar_v3.Schema$EventDateTime } => {
     if (event.isAllDay) {
         return {
-            start: { date: format(asiaJerusalem(event.start), "yyyy-MM-dd") },
-            end: { date: format(asiaJerusalem(event.end), "yyyy-MM-dd") }
+            start: { date: format(event.start, "yyyy-MM-dd") },
+            end: { date: format(event.end, "yyyy-MM-dd") }
         }
     } else {
         return {
             start: {
-                dateTime: format(asiaJerusalem(event.start), "yyyy-MM-dd'T'HH:mm:ssXXX"),
+                dateTime: format(event.start, "yyyy-MM-dd'T'HH:mm:ssXXX"),
                 timeZone: "Asia/Jerusalem"
             },
             end: {
-                dateTime: format(asiaJerusalem(event.end), "yyyy-MM-dd'T'HH:mm:ssXXX"),
+                dateTime: format(event.end, "yyyy-MM-dd'T'HH:mm:ssXXX"),
                 timeZone: "Asia/Jerusalem"
             }
         }
