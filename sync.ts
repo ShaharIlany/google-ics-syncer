@@ -1,8 +1,8 @@
-import { addMilliseconds, format, max, parseISO } from "date-fns";
+import { format, max, parseISO } from "date-fns";
 import { updateAboutEvents } from "./notifications";
 import { type OutlookEvent, type MinifiedEvent, type ReservedWord, OutlookEventZod } from "./types";
 import { google, calendar_v3 } from "googleapis"
-import { getTimezoneOffset } from "date-fns-tz";
+import { asiaJerusalem } from "./utils";
 
 const oauth2Client = new google.auth.OAuth2(
     process.env.CLIENT_ID,
@@ -12,8 +12,6 @@ const oauth2Client = new google.auth.OAuth2(
 const reservedWords: ReservedWord[] = JSON.parse(process.env.RESERVED_WORDS ?? "[]")
 
 oauth2Client.setCredentials({ refresh_token: process.env.REFRESH_TOKEN });
-
-const asiaJerusalem = (date: Date) => addMilliseconds(date, getTimezoneOffset("Asia/Jerusalem"))
 
 const getEventStartEnd = (event: OutlookEvent): { start: calendar_v3.Schema$EventDateTime, end: calendar_v3.Schema$EventDateTime } => {
     if (event.isAllDay) {
