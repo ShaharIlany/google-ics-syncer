@@ -1,4 +1,4 @@
-import { addMilliseconds, format, max } from "date-fns";
+import { addMilliseconds, format, max, parseISO } from "date-fns";
 import { updateAboutEvents } from "./notifications";
 import { type OutlookEvent, type MinifiedEvent, type ReservedWord, OutlookEventZod } from "./types";
 import { google, calendar_v3 } from "googleapis"
@@ -132,6 +132,7 @@ export const execute = async () => {
                     return false
                 }
 
+                console.log(parseISO(googleEvent.end.dateTime ?? ""))
                 console.log(`<${uidForLogs}>: ${event.isAllDay} ${googleEvent.end.dateTime} ${format(asiaJerusalem(event.end), "yyyy-MM-dd'T'HH:mm:ssXXX")}`)
                 // If they are not all day events but the end dates are different then those are not the same events
                 if (!event.isAllDay && googleEvent.end.dateTime !== format(asiaJerusalem(event.end), "yyyy-MM-dd'T'HH:mm:ssXXX")) {
