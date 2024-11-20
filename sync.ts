@@ -80,7 +80,7 @@ export const execute = async () => {
         const gCal = google.calendar({ version: 'v3', auth: oauth2Client });
         let googleEvents = (await gCal.events.list({
             calendarId: process.env.CALENDAR_ID,
-            timeMin: asiaJerusalem(earliestDate).toISOString(),
+            timeMin: earliestDate.toISOString(),
             maxResults: 1000,
             singleEvents: true,
             orderBy: 'startTime'
