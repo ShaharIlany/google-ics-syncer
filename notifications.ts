@@ -1,6 +1,7 @@
 import { format, subDays } from "date-fns"
 import type { MinifiedEvent } from "./types"
 import type { calendar_v3 } from "googleapis"
+import { asiaJerusalem } from "./utils"
 
 const sendNotification = async (title: string, tags: string[], body: string, clickDate: Date) => {
     await fetch(`https://ntfy.sh/${process.env.NTFY_TOPIC_ID}`, {
@@ -23,16 +24,16 @@ const formatDateString = (start: calendar_v3.Schema$EventDateTime, end: calendar
     if (start.date && end.date) {
         if (start.date === end.date) {
             // dd/MM/yyyy
-            return format(new Date(end.date), "dd/MM/yyyy")
+            return format(asiaJerusalem(new Date(end.date)), "dd/MM/yyyy")
         } else {
             // dd/MM/yyyy - dd/MM/yyyy
-            return `${format(new Date(start.date), "dd/MM/yyyy")} - ${format(subDays(new Date(end.date), 1), "dd/MM/yyyy")}`
+            return `${format(asiaJerusalem(new Date(start.date)), "dd/MM/yyyy")} - ${format(subDays(asiaJerusalem(new Date(end.date)), 1), "dd/MM/yyyy")}`
         }
     }
 
     if (start.dateTime && end.dateTime) {
-        const iStart = new Date(start.dateTime)
-        const iEnd = new Date(end.dateTime)
+        const iStart = asiaJerusalem(new Date(start.dateTime))
+        const iEnd = asiaJerusalem(new Date(end.dateTime))
         if (format(iStart, "dd/MM/yyyy") === format(iEnd, "dd/MM/yyyy")) {
             // dd/MM/yyyy HH:mm - HH:mm
             return `${format(iStart, "dd/MM/yyyy HH:mm")} - ${format(iEnd, "HH:mm")}`
