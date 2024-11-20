@@ -187,7 +187,7 @@ export const execute = async () => {
                             ...oldProperties
                         }
                     })
-                    rescheduledEvents.push({ summary: summary ?? "", start, end, location: location ?? "", googleEvent: event, oldEnd: rescheduledEvent.end, oldStart: rescheduledEvent.start })
+                    rescheduledEvents.push({ summary: summary ?? "", start: rescheduledEvent.start, end: rescheduledEvent.end, location: location ?? "", googleEvent: event, oldEnd: end, oldStart: start })
                     console.log(`<${uidForLogs}> Removing event from added event list`)
                     addedEvents.splice(addedEvents.findIndex((i) => i.googleEvent.id === rescheduledEvent.googleEvent.id), 1)
                 } else {
