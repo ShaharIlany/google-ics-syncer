@@ -130,6 +130,9 @@ export const execute = async () => {
                     return false
                 }
 
+                // if (!event.isAllDay) {
+                //     console.log(format(asiaJerusalem(parseISO(googleEvent.end.dateTime ?? "")), "yyyy-MM-dd'T'HH:mm:ssXXX"), format(asiaJerusalem(event.end), "yyyy-MM-dd'T'HH:mm:ssXXX"), format(asiaJerusalem(parseISO(googleEvent.end.dateTime ?? "")), "yyyy-MM-dd'T'HH:mm:ssXXX") === format(asiaJerusalem(event.end), "yyyy-MM-dd'T'HH:mm:ssXXX"))
+                // }
 
                 // If they are not all day events but the end dates are different then those are not the same events
                 if (!event.isAllDay && format(asiaJerusalem(parseISO(googleEvent.end.dateTime ?? "")), "yyyy-MM-dd'T'HH:mm:ssXXX") !== format(asiaJerusalem(event.end), "yyyy-MM-dd'T'HH:mm:ssXXX")) {
@@ -145,15 +148,15 @@ export const execute = async () => {
             } else {
                 console.log(`<${uidForLogs}>: Inserting event into google calendar`)
                 const { start, end } = getEventStartEnd(event)
-                // const newEvent = await gCal.events.insert({
-                //     calendarId: process.env.CALENDAR_ID,
-                //     requestBody: {
-                //         summary: subject,
-                //         location,
-                //         start, end
-                //     }
-                // })
-                addedEvents.push({ summary: subject, start, end, location, googleEvent: {} })
+                const newEvent = await gCal.events.insert({
+                    calendarId: process.env.CALENDAR_ID,
+                    requestBody: {
+                        summary: subject,
+                        location,
+                        start, end
+                    }
+                })
+                addedEvents.push({ summary: subject, start, end, location, googleEvent: newEvent.data })
             }
             console.log(`<${uidForLogs}>: Done`)
 
