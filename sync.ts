@@ -205,7 +205,7 @@ export const execute = async () => {
 
         if (deletedEvents.length > 0 || addedEvents.length > 0 || rescheduledEvents.length > 0) {
             console.log(`Sending notification about events update`)
-            // await updateAboutEvents(addedEvents, deletedEvents, rescheduledEvents)
+            await updateAboutEvents(addedEvents, deletedEvents, rescheduledEvents)
             console.log(`Notification sent`)
         }
         console.log(`Summary | Added Events: ${addedEvents.length}, Deleted Events: ${deletedEvents.length}, Rescheduled Events: ${rescheduledEvents.length}`)
