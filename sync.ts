@@ -132,7 +132,6 @@ export const execute = async () => {
                     return false
                 }
 
-                console.log(`<${uidForLogs}>: ${event.isAllDay} ${format(parseISO(googleEvent.end.dateTime ?? ""), "yyyy-MM-dd'T'HH:mm:ssXXX")} ${format(asiaJerusalem(event.end), "yyyy-MM-dd'T'HH:mm:ssXXX")}`)
                 // If they are not all day events but the end dates are different then those are not the same events
                 if (!event.isAllDay && format(parseISO(googleEvent.end.dateTime ?? ""), "yyyy-MM-dd'T'HH:mm:ssXXX") !== format(asiaJerusalem(event.end), "yyyy-MM-dd'T'HH:mm:ssXXX")) {
                     return false
