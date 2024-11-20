@@ -87,6 +87,8 @@ export const execute = async () => {
         })).data.items ?? []
 
         for (const event of outlookEvents) {
+            console.log(``)
+            console.log(`Starting to read new event`)
             const uidForLogs = event.id.substring(event.id.length - 10)
 
             const subject = reservedWords.reduce((value, reservedPhrase) => value.replaceAll(reservedPhrase.search, reservedPhrase.replace), event.subject).replaceAll(/[ ]+/g, " ")
@@ -204,7 +206,7 @@ export const execute = async () => {
 
         if (deletedEvents.length > 0 || addedEvents.length > 0 || rescheduledEvents.length > 0) {
             console.log(`Sending notification about events update`)
-            await updateAboutEvents(addedEvents, deletedEvents, rescheduledEvents)
+            // await updateAboutEvents(addedEvents, deletedEvents, rescheduledEvents)
             console.log(`Notification sent`)
         }
         console.log(`Summary | Added Events: ${addedEvents.length}, Deleted Events: ${deletedEvents.length}, Rescheduled Events: ${rescheduledEvents.length}`)
