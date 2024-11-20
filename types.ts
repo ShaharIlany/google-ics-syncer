@@ -3,17 +3,17 @@ import z from "zod"
 
 export const OutlookEventZod = z.object({
     subject: z.string(),
-    start: z.coerce.date(),//'2024-12-16T15:00:00.0000000',
+    start: z.coerce.date(),
     end: z.coerce.date(),
-    startWithTimeZone: z.coerce.date(),//'2024-12-16T15:00:00+00:00',
+    startWithTimeZone: z.coerce.date(),
     endWithTimeZone: z.coerce.date(),
     body: z.string(),
     isHtml: z.boolean(),
     responseType: z.string(),
-    responseTime: z.coerce.date(), //'0001-01-01T00:00:00+00:00',
+    responseTime: z.coerce.date(),
     id: z.string(),
-    createdDateTime: z.coerce.date(),//'2024-11-17T02:49:25.5949173+00:00',
-    lastModifiedDateTime: z.coerce.date(), //'2024-11-17T02:49:28.5269505+00:00',
+    createdDateTime: z.coerce.date(),
+    lastModifiedDateTime: z.coerce.date(),
     organizer: z.string(),
     timeZone: z.string(),
     iCalUId: z.string(),
@@ -31,28 +31,6 @@ export const OutlookEventZod = z.object({
     showAs: z.string(),
     responseRequested: z.boolean(),
     sensitivity: z.string(),
-    // uid: z.string(),
-    // description: z.string(),
-    // summary: z.string(),
-    // dtstart: z.string(),
-    // dtend: z.string(),
-    // class: z.string(),
-    // priority: z.coerce.number(),
-    // dtstamp: z.string(),
-    // transp: z.string(),
-    // status: z.string(),
-    // sequence: z.coerce.number(),
-    // location: z.string(),
-    // "x-microsoft-cdo-appt-sequence": z.coerce.number(),
-    // "x-microsoft-cdo-busystatus": z.string(),
-    // "x-microsoft-cdo-intendedstatus": z.string(),
-    // "x-microsoft-cdo-alldayevent": z.boolean(),
-    // "x-microsoft-cdo-importance": z.coerce.number(),
-    // "x-microsoft-cdo-insttype": z.coerce.number(),
-    // "x-microsoft-donotforwardmeeting": z.boolean(),
-    // "x-microsoft-disallow-counter": z.boolean(),
-    // "x-microsoft-requestedattendancemode": z.string(),
-    // "x-microsoft-isresponserequested": z.boolean(),
 })
 
 export type OutlookEvent = z.infer<typeof OutlookEventZod>
@@ -83,21 +61,12 @@ export const TimeZoneZod = z.object({
 
 export type TimeZone = z.infer<typeof TimeZoneZod>
 
-// export const CalendarZod = z.object({
-//     method: z.string(),
-//     prodid: z.string(),
-//     version: z.coerce.number(),
-//     "x-wr-calname": z.string(),
-//     timezones: z.array(TimeZoneZod),
-//     events: z.array(CalendarEventZod)
-// })
+export const ReservedWordZod = z.object({
+    search: z.string(),
+    replace: z.string(),
+})
 
-// export type Calendar = z.infer<typeof CalendarZod>
-
-export type ReservedWord = {
-    search: string;
-    replace: string
-}
+export type ReservedWord = z.infer<typeof ReservedWordZod>
 
 export type MinifiedEvent = {
     googleEvent: calendar_v3.Schema$Event;
