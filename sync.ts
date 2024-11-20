@@ -1,6 +1,6 @@
 import { format, max, parseISO } from "date-fns";
 import { updateAboutEvents } from "./notifications";
-import { type OutlookEvent, type MinifiedEvent, type ReservedWord, OutlookEventZod } from "./types";
+import { type OutlookEvent, type MinifiedEvent, OutlookEventZod, ReservedWordZod } from "./types";
 import { google, calendar_v3 } from "googleapis"
 import { asiaJerusalem } from "./utils";
 
@@ -8,8 +8,6 @@ const oauth2Client = new google.auth.OAuth2(
     process.env.CLIENT_ID,
     process.env.CLIENT_SECRET
 );
-
-const reservedWords: ReservedWord[] = JSON.parse(process.env.RESERVED_WORDS ?? "[]")
 
 oauth2Client.setCredentials({ refresh_token: process.env.REFRESH_TOKEN });
 
@@ -56,10 +54,19 @@ export const execute = async () => {
             return
         }
 
+        const { data: { files: configFile } } = await gDrive.files.list({ pageSize: 10, fields: "files(id,name,parents)", q: `'${***REMOVED***DirectoryId}' in parents and name = 'data.json'` })
+        const configFileId = configFile?.[0].id
+        if (!configFileId) {
+            console.log("***REMOVED***/config.json not found.")
+            return
+        }
+
 
         const { data } = await gDrive.files.get({ fileId: dataFileId, alt: "media", })
         const outlookEvents = OutlookEventZod.array().parse(data)
 
+        const { data: config } = await gDrive.files.get({ fileId: configFileId, alt: "media", })
+        const reservedWords = ReservedWordZod.array().parse(config)
         console.log(`Downloaded ${outlookEvents.length} events. Starting`)
 
         const addedEvents: MinifiedEvent[] = []
