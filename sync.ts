@@ -13,7 +13,7 @@ const reservedWords: ReservedWord[] = JSON.parse(process.env.RESERVED_WORDS ?? "
 
 oauth2Client.setCredentials({ refresh_token: process.env.REFRESH_TOKEN });
 
-const asiaJerusalem = (date: Date) => date //addMilliseconds(date, getTimezoneOffset("Asia/Jerusalem"))
+const asiaJerusalem = (date: Date) => addMilliseconds(date, getTimezoneOffset("Asia/Jerusalem"))
 
 const getEventStartEnd = (event: OutlookEvent): { start: calendar_v3.Schema$EventDateTime, end: calendar_v3.Schema$EventDateTime } => {
     if (event.isAllDay) {
@@ -106,18 +106,15 @@ export const execute = async () => {
             console.log(`<${uidForLogs}>: Looking for matching event on google calendar`)
             const matchingGoogleEvent = googleEvents.find(googleEvent => {
 
-                console.log(`<${uidForLogs}>: ${googleEvent.end}`)
                 if (!googleEvent.end) {
                     return false
                 }
 
-                console.log(`<${uidForLogs}>: googleEvent.summary !== subject ?`)
                 // If the subjects are different then those are not the same events
                 if (googleEvent.summary !== subject) {
                     return false
                 }
 
-                console.log(`<${uidForLogs}>: googleEvent.location !== location ?`)
                 // If the locations are not the same then those are not the same events
                 if (googleEvent.location !== location) {
                     return false
@@ -150,19 +147,22 @@ export const execute = async () => {
             } else {
                 console.log(`<${uidForLogs}>: Inserting event into google calendar`)
                 const { start, end } = getEventStartEnd(event)
-                const newEvent = await gCal.events.insert({
-                    calendarId: process.env.CALENDAR_ID,
-                    requestBody: {
-                        summary: subject,
-                        location,
-                        start, end
-                    }
-                })
-                addedEvents.push({ summary: subject, start, end, location, googleEvent: newEvent.data })
+                // const newEvent = await gCal.events.insert({
+                //     calendarId: process.env.CALENDAR_ID,
+                //     requestBody: {
+                //         summary: subject,
+                //         location,
+                //         start, end
+                //     }
+                // })
+                addedEvents.push({ summary: subject, start, end, location, googleEvent: {} })
             }
             console.log(`<${uidForLogs}>: Done`)
+
         }
+        console.log(addedEvents.length)
         console.log(`Finished parsing for this calendar. Events left: ${googleEvents.length}`)
+        throw Error("Not implemented")
 
         if (googleEvents.length > 0) {
             console.log("Deleting left google events")
