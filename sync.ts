@@ -1,4 +1,4 @@
-import { addMilliseconds, format } from "date-fns";
+import { addMilliseconds, format, max } from "date-fns";
 import { updateAboutEvents } from "./notifications";
 import { type OutlookEvent, type MinifiedEvent, type ReservedWord, OutlookEventZod } from "./types";
 import { google, calendar_v3 } from "googleapis"
@@ -71,12 +71,16 @@ export const execute = async () => {
             return
         }
 
-        const earliestDate = outlookEvents.toSorted((a, b) => +a.start - +b.start)[0].start.toISOString()
+        const dateSorted = outlookEvents.toSorted((a, b) => +a.start - +b.start)
+        const earliestDate = dateSorted[0].start
+
+        console.log(earliestDate)
+        console.log(max([earliestDate, new Date()]).toISOString())
 
         const gCal = google.calendar({ version: 'v3', auth: oauth2Client });
         let googleEvents = (await gCal.events.list({
             calendarId: process.env.CALENDAR_ID,
-            timeMin: earliestDate,
+            timeMin: asiaJerusalem(earliestDate).toISOString(),
             maxResults: 1000,
             singleEvents: true,
             orderBy: 'startTime'
@@ -167,6 +171,16 @@ export const execute = async () => {
                 if (rescheduledEvent && rescheduledEvent.googleEvent.id) {
                     console.log(`<${uidForLogs}> This event is rescheduled.`)
                     console.log(`<${uidForLogs}> Updating the current event with the old properties`)
+                    const { start: _, end: __, ...oldProperties } = event
+                    await gCal.events.update({
+                        calendarId: process.env.CALENDAR_ID,
+                        eventId: rescheduledEvent.googleEvent.id,
+                        requestBody: {
+                            start: rescheduledEvent.googleEvent.start,
+                            end: rescheduledEvent.googleEvent.end,
+                            ...oldProperties
+                        }
+                    })
                     rescheduledEvents.push({ summary: summary ?? "", start, end, location: location ?? "", googleEvent: event, oldEnd: rescheduledEvent.end, oldStart: rescheduledEvent.start })
                     console.log(`<${uidForLogs}> Removing event from added event list`)
                     addedEvents.splice(addedEvents.findIndex((i) => i.googleEvent.id === rescheduledEvent.googleEvent.id), 1)
