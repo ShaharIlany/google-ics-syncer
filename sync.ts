@@ -103,30 +103,37 @@ export const execute = async () => {
 
             console.log(`<${uidForLogs}>: Looking for matching event on google calendar`)
             const matchingGoogleEvent = googleEvents.find(googleEvent => {
+
+                console.log(`<${uidForLogs}>: ${googleEvent.end}`)
                 if (!googleEvent.end) {
                     return false
                 }
 
+                console.log(`<${uidForLogs}>: googleEvent.summary !== subject ?`)
                 // If the subjects are different then those are not the same events
                 if (googleEvent.summary !== subject) {
                     return false
                 }
 
+                console.log(`<${uidForLogs}>: googleEvent.location !== location ?`)
                 // If the locations are not the same then those are not the same events
                 if (googleEvent.location !== location) {
                     return false
                 }
 
+                console.log(`<${uidForLogs}>: ${event.isAllDay} ${!!googleEvent.end.date}`)
                 // If one of the events is all day and the second is not, then those are not the same events
                 if (event.isAllDay !== !!(googleEvent.end.date)) {
                     return false
                 }
 
+                console.log(`<${uidForLogs}>: ${event.isAllDay} ${googleEvent.end.date} ${format(asiaJerusalem(event.end), "yyyy-MM-dd")}`)
                 // If they are all day events but the end dates are different then those are not the same events
                 if (event.isAllDay && googleEvent.end.date !== format(asiaJerusalem(event.end), "yyyy-MM-dd")) {
                     return false
                 }
 
+                console.log(`<${uidForLogs}>: ${event.isAllDay} ${googleEvent.end.dateTime} ${format(asiaJerusalem(event.end), "yyyy-MM-dd'T'HH:mm:ssXXX")}`)
                 // If they are not all day events but the end dates are different then those are not the same events
                 if (!event.isAllDay && googleEvent.end.dateTime !== format(asiaJerusalem(event.end), "yyyy-MM-dd'T'HH:mm:ssXXX")) {
                     return false
