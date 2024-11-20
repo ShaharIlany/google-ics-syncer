@@ -54,7 +54,7 @@ export const execute = async () => {
             return
         }
 
-        const { data: { files: configFile } } = await gDrive.files.list({ pageSize: 10, fields: "files(id,name,parents)", q: `'${***REMOVED***DirectoryId}' in parents and name = 'data.json'` })
+        const { data: { files: configFile } } = await gDrive.files.list({ pageSize: 10, fields: "files(id,name,parents)", q: `'${***REMOVED***DirectoryId}' in parents and name = 'config.json'` })
         const configFileId = configFile?.[0].id
         if (!configFileId) {
             console.log("***REMOVED***/config.json not found.")
@@ -66,7 +66,9 @@ export const execute = async () => {
         const outlookEvents = OutlookEventZod.array().parse(data)
 
         const { data: config } = await gDrive.files.get({ fileId: configFileId, alt: "media", })
+
         const reservedWords = ReservedWordZod.array().parse(config)
+
         console.log(`Downloaded ${outlookEvents.length} events. Starting`)
 
         const addedEvents: MinifiedEvent[] = []
