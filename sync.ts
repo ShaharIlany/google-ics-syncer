@@ -161,9 +161,7 @@ export const execute = async () => {
             console.log(`<${uidForLogs}>: Done`)
 
         }
-        console.log(addedEvents.length)
-        console.log(`Finished parsing for this calendar. Events left: ${googleEvents.length}`)
-        throw Error("Not implemented")
+        console.log(`Finished parsing. Added events: ${addedEvents.length}, Events left: ${googleEvents.length}`)
 
         if (googleEvents.length > 0) {
             console.log("Deleting left google events")
