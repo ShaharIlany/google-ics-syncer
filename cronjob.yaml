@@ -1,0 +1,19 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: google-ics-syncer
+  namespace: google-ics-syncer
+spec:
+  schedule: "*/10 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: sync
+            image: ghcr.io/shaharilany/google-ics-syncer:latest
+            imagePullPolicy: Always
+            envFrom:
+              - secretRef:
+                  name: google-ics-syncer
+          restartPolicy: OnFailure

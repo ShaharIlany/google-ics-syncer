@@ -35,5 +35,6 @@ jobs:
               with:
                   context: .
                   push: true
+                  platforms: linux/arm64
                   tags: |
                       ghcr.io/${{ env.OWNER_LC }}/google-ics-syncer:latest
