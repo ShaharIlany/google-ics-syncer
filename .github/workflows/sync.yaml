@@ -12,9 +12,12 @@ jobs:
     env:
       CLIENT_ID: ${{ secrets.CLIENT_ID }}
       CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
-      CALENDAR_ID: ${{ secrets.CALENDAR_ID }}
+      DOWNLOAD_CALENDAR_ID: ${{ secrets.DOWNLOAD_CALENDAR_ID }}
+      UPLOAD_CALENDAR_ID: ${{ secrets.UPLOAD_CALENDAR_ID }}
+      DRIVE_DIRECTORY_NAME: ${{ secrets.DRIVE_DIRECTORY_NAME }}
       REFRESH_TOKEN: ${{ secrets.REFRESH_TOKEN }}
-      NTFY_TOPIC_ID: ${{ secrets.NTFY_TOPIC_ID }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
 
     steps:
       - name: Check out repository code
