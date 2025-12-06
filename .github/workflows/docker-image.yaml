@@ -36,4 +36,4 @@ jobs:
                   context: .
                   push: true
                   tags: |
-                      ghcr.io/${{ OWNER_LC }}/google-ics-syncer:latest
+                      ghcr.io/${{ env.OWNER_LC }}/google-ics-syncer:latest
