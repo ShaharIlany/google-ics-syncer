@@ -1,4 +1,4 @@
-import { addMonths, format, parseISO, subWeeks } from "date-fns";
+import { addDays, addMonths, format, parseISO, subWeeks } from "date-fns";
 import { google, calendar_v3, drive_v3 } from "googleapis";
 import z from "zod";
 
@@ -21,6 +21,7 @@ oauth2Client.setCredentials({ refresh_token: process.env.REFRESH_TOKEN });
 const DOWNLOAD_CALENDAR_ID = process.env.DOWNLOAD_CALENDAR_ID;
 const UPLOAD_CALENDAR_ID = process.env.UPLOAD_CALENDAR_ID;
 const DRIVE_DIRECTORY_NAME = process.env.DRIVE_DIRECTORY_NAME;
+const UPDATE_EVENT_DESCRIPTION = "UPDATE_EVENT" as const;
 
 type DateRange = {
   rangeStart: Date;
@@ -289,6 +290,11 @@ const filterFutureGoogleEvents = (
   const now = new Date();
 
   return events.filter((event) => {
+    // Never treat the special UPDATE_EVENT marker as a candidate
+    if (event.description === UPDATE_EVENT_DESCRIPTION) {
+      return false;
+    }
+
     if (!event.start) {
       return false;
     }
@@ -335,6 +341,83 @@ const upsertJsonFileInDrive = async (
       media,
     });
   }
+};
+
+const cleanupAndCreateUpdateEvent = async (
+  gCal: calendar_v3.Calendar,
+  calendarId: string
+) => {
+  console.log("🔄 Updating last-sync marker event");
+
+  const nowInJerusalem = asiaJerusalem(new Date());
+
+  // Wider search range to make sure we clean old marker events as well
+  const searchRangeStart = subWeeks(nowInJerusalem, 12);
+  const searchRangeEnd = addMonths(nowInJerusalem, 12);
+
+  let pageToken: string | undefined;
+  const eventsToDelete: string[] = [];
+
+  do {
+    const res = await gCal.events.list({
+      calendarId,
+      timeMin: searchRangeStart.toISOString(),
+      timeMax: searchRangeEnd.toISOString(),
+      maxResults: 2500,
+      singleEvents: true,
+      orderBy: "startTime",
+      pageToken,
+    });
+
+    const items = res.data.items ?? [];
+
+    for (const event of items) {
+      if (event.description === UPDATE_EVENT_DESCRIPTION && event.id) {
+        eventsToDelete.push(event.id);
+      }
+    }
+
+    pageToken = res.data.nextPageToken ?? undefined;
+  } while (pageToken);
+
+  if (eventsToDelete.length > 0) {
+    console.log(
+      `🧹 Found ${eventsToDelete.length} existing UPDATE_EVENT markers, deleting them`
+    );
+
+    for (const eventId of eventsToDelete) {
+      await gCal.events.delete({
+        calendarId,
+        eventId,
+      });
+    }
+  } else {
+    console.log("ℹ️ No existing UPDATE_EVENT markers found to delete");
+  }
+
+  const todayDate = format(nowInJerusalem, "yyyy-MM-dd");
+  const tomorrowDate = format(addDays(nowInJerusalem, 1), "yyyy-MM-dd");
+  const timeText = format(nowInJerusalem, "HH:mm");
+
+  await gCal.events.insert({
+    calendarId,
+    requestBody: {
+      summary: `Last update time: ${timeText}`,
+      description: UPDATE_EVENT_DESCRIPTION,
+      start: {
+        // All-day event, using date-only fields
+        date: todayDate,
+      },
+      end: {
+        // Google Calendar expects all-day events to be exclusive of the end date
+        date: tomorrowDate,
+      },
+    },
+  });
+
+  console.log(
+    `✅ Created last-sync marker event for ${todayDate} with time ${timeText}`
+  );
 };
 
 export const execute = async () => {
@@ -632,6 +715,9 @@ export const execute = async () => {
         `📁 Upload phase: wrote ${uploadEvents.length} events to upload.json`
       );
     }
+
+    // Create / refresh "Last update time" all-day event (no notification)
+    await cleanupAndCreateUpdateEvent(gCal, DOWNLOAD_CALENDAR_ID);
 
     console.log(
       `📊 Summary | Added: ${addedEvents.length}, Deleted: ${deletedEvents.length}, Rescheduled: ${rescheduledEvents.length}`
