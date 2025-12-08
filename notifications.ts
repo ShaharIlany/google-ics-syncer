@@ -120,7 +120,7 @@ export const updateAboutEvents = async (
         event.start?.date ?? event.start?.dateTime ?? ""
       );
       await sendNotification(
-        `${event.summary} - New`,
+        `➕ ${event.summary}`,
         `${formattedDate ? "🕑 " + formattedDate : ""}${
           event.location ? "\n📌 " + event.location : ""
         }`,
@@ -136,7 +136,7 @@ export const updateAboutEvents = async (
         event.start?.date ?? event.start?.dateTime ?? ""
       );
       await sendNotification(
-        `${event.summary} - Canceled`,
+        `❌ ${event.summary}`,
         `${formattedDate ? "🕑 " + formattedDate : ""}${
           event.location ? "\n📌 " + event.location : ""
         }`,
@@ -153,7 +153,7 @@ export const updateAboutEvents = async (
         event.start?.date ?? event.start?.dateTime ?? ""
       );
       await sendNotification(
-        `${event.summary} - Rescheduled`,
+        `↩️ ${event.summary}`,
         `${formattedDate ? "🕑 " + formattedDate : ""}${
           formattedOldDate ? "\n❌ " + formattedOldDate : ""
         }${event.location ? "\n📌 " + event.location : ""}`,
