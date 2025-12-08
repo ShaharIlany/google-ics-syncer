@@ -1,4 +1,11 @@
-import { addDays, addMonths, format, parseISO, subWeeks } from "date-fns";
+import {
+  addDays,
+  addMonths,
+  differenceInCalendarDays,
+  format,
+  parseISO,
+  subWeeks,
+} from "date-fns";
 import { google, calendar_v3, drive_v3 } from "googleapis";
 import z from "zod";
 
@@ -345,11 +352,17 @@ const upsertJsonFileInDrive = async (
 
 const cleanupAndCreateUpdateEvent = async (
   gCal: calendar_v3.Calendar,
-  calendarId: string
+  calendarId: string,
+  latestEventDate: Date
 ) => {
   console.log("🔄 Updating last-sync marker event");
 
   const nowInJerusalem = asiaJerusalem(new Date());
+  const latestInJerusalem = asiaJerusalem(latestEventDate);
+  const daysDiff = Math.max(
+    0,
+    differenceInCalendarDays(latestInJerusalem, nowInJerusalem)
+  );
 
   // Wider search range to make sure we clean old marker events as well
   const searchRangeStart = subWeeks(nowInJerusalem, 12);
@@ -402,7 +415,7 @@ const cleanupAndCreateUpdateEvent = async (
   await gCal.events.insert({
     calendarId,
     requestBody: {
-      summary: `Last update time: ${timeText}`,
+      summary: `Update: ${timeText} (+${daysDiff})`,
       description: UPDATE_EVENT_DESCRIPTION,
       start: {
         // All-day event, using date-only fields
@@ -502,6 +515,7 @@ export const execute = async () => {
       (a, b) => +a.start - +b.start
     );
     const earliestDate = dateSorted[0].start;
+    const latestEventDate = dateSorted[dateSorted.length - 1].end;
 
     console.log(
       `⏱️ Earliest event in range starts at ${earliestDate.toISOString()}`
@@ -716,8 +730,14 @@ export const execute = async () => {
       );
     }
 
-    // Create / refresh "Last update time" all-day event (no notification)
-    await cleanupAndCreateUpdateEvent(gCal, DOWNLOAD_CALENDAR_ID);
+    // Create / refresh "Update: HH:MM (+DAYS)" all-day event (no notification)
+    if (latestEventDate) {
+      await cleanupAndCreateUpdateEvent(
+        gCal,
+        DOWNLOAD_CALENDAR_ID,
+        latestEventDate
+      );
+    }
 
     console.log(
       `📊 Summary | Added: ${addedEvents.length}, Deleted: ${deletedEvents.length}, Rescheduled: ${rescheduledEvents.length}`
