@@ -569,6 +569,12 @@ export const execute = async () => {
         console.log(`<${uidForLogs}> 📅 Inserting event into Google Calendar`);
         const { start, end } = getEventStartEnd(event);
 
+        const generatedDescription = `${SYNC_ID_PREFIX}${buildEventId(
+          event,
+          subject,
+          location
+        )}`;
+
         const newEvent = await gCal.events.insert({
           calendarId: DOWNLOAD_CALENDAR_ID,
           requestBody: {
@@ -576,13 +582,13 @@ export const execute = async () => {
             location,
             start,
             end,
-            description: `${SYNC_ID_PREFIX}${buildEventId(
-              event,
-              subject,
-              location
-            )}`,
+            description: generatedDescription,
           },
         });
+
+        console.log(
+          `<${uidForLogs}> ${subject}\n${start.dateTime}\n${end.dateTime}\n${location}\n${generatedDescription}`
+        );
 
         addedEvents.push({
           summary: subject,
